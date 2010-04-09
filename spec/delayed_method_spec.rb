@@ -36,6 +36,14 @@ class StoryReader
 
 end
 
+class MultipleStoryReader
+
+  def read(stories)
+    "First: #{stories[:first].tell}, Second: #{stories[:second].tell}"
+  end
+
+end
+
 describe 'random ruby objects' do
   before       { Delayed::Job.delete_all }
 
@@ -108,6 +116,22 @@ describe 'random ruby objects' do
     job.payload_object.method.should  == :read
     job.payload_object.args.should    == ["AR:Story:#{story.id}"]
     job.payload_object.perform.should == 'Epilog: Once upon...'
+  end                 
+
+  it "should store compressed objects even when nested in a hash" do
+
+    first_story  = Story.create :text => 'First Story...'
+    second_story = Story.create :text => 'Second Story...'
+
+    reader = MultipleStoryReader.new
+    reader.send_later(:read, {:first => first_story,
+                              :second => second_story})
+
+    job =  Delayed::Job.find(:first)
+    job.payload_object.class.should   == Delayed::PerformableMethod
+    job.payload_object.method.should  == :read
+    job.payload_object.args.should    == [{:first => "AR:Story:#{first_story.id}", :second => "AR:Story:#{second_story.id}"}]
+    job.payload_object.perform.should == "First: First Story..., Second: Second Story..."
   end                 
   
   it "should call send later on methods which are wrapped with handle_asynchronously" do

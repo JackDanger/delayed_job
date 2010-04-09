@@ -32,6 +32,7 @@ module Delayed
       case arg
       when CLASS_STRING_FORMAT then $1.constantize
       when AR_STRING_FORMAT    then $1.constantize.find($2)
+      when Hash                then load_values(arg)
       else arg
       end
     end
@@ -40,7 +41,22 @@ module Delayed
       case arg
       when Class              then class_to_string(arg)
       when ActiveRecord::Base then ar_to_string(arg)
+      when Hash               then dump_values(arg)
       else arg
+      end
+    end
+
+    def load_values(arg)
+      arg.inject({}) do |hash, (k,v)|
+        hash[k] = load v
+        hash
+      end
+    end
+
+    def dump_values(arg)
+      arg.inject({}) do |hash, (k,v)|
+        hash[k] = dump v
+        hash
       end
     end
 
